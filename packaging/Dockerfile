@@ -1,22 +1,16 @@
-FROM gcr.io/google-appengine/python
+FROM python:3.7-alpine
 
-# Create a virtualenv for dependencies. This isolates these packages from
-# system-level packages.
-RUN virtualenv /env -p python3.6
+WORKDIR /app
 
-# Setting these environment variables are the same as running
-# source /env/bin/activate.
-ENV VIRTUAL_ENV /env
-ENV PATH /env/bin:$PATH
-
-# Copy the application's requirements.txt and run pip to install all
-# dependencies into the virtualenv.
-ADD requirements.txt /app/requirements.txt
-RUN pip install -r /app/requirements.txt
+# Copy the framework and application's requirements.txt and run pip to
+# install all dependencies. Alpine doesn't include gcc by default, so
+# install that before pip.
+COPY framework/requirements.txt /app/framework/requirements.txt
+COPY requirements.txt /app/requirements.txt
+RUN /bin/ash -c 'apk add build-base && pip install -r /app/framework/requirements.txt && pip install -r /app/requirements.txt'
 
 # Add the application source code.
 ADD . /app
 
-# Run a WSGI server to serve the application. gunicorn must be declared as
-# a dependency in requirements.txt.
-CMD gunicorn -b :$PORT run:app
+# Run a WSGI server to serve the application.
+CMD gunicorn -b :$PORT config:app

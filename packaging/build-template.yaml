@@ -1,0 +1,78 @@
+apiVersion: build.knative.dev/v1alpha1
+kind: BuildTemplate
+metadata:
+  name: pyfn
+spec:
+  parameters:
+  - name: IMAGE
+    description: The name of the image to push
+  - name: DOCKERFILE
+    description: Path to the Dockerfile to build.
+    default: /workspace/Dockerfile
+
+  timeout: 20m
+
+  steps:
+  - name: fill-in-framework
+    image: alpine:3.8
+    entrypoint: /bin/ash
+    args:
+    - '/bin/ash'
+    - '-c'
+    - 'cp /py-framework/Dockerfile /py-framework/config.py /workspace/ && mkdir /workspace/framework && cp /py-framework/requirements.txt /workspace/framework/requirements.txt'
+    volumeMounts:
+    - mountPath: /py-framework
+      name: py-function-framework
+  - name: build-and-push
+    image: gcr.io/kaniko-project/executor:v0.1.0
+    args:
+    - '--dockerfile=${DOCKERFILE}'
+    - '--destination=${IMAGE}'
+
+  volumes:
+  - name:  py-function-framework
+    configMap:
+      name: builder-files
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: builder-files
+data:
+  Dockerfile: |
+    FROM python:3.7-alpine
+
+    WORKDIR /app
+
+    # Copy the framework and application's requirements.txt and run pip to
+    # install all dependencies. Alpine doesn't include gcc by default, so
+    # install that before pip.
+    COPY framework/requirements.txt /app/framework/requirements.txt
+    COPY requirements.txt /app/requirements.txt
+    RUN /bin/ash -c 'apk add build-base && pip install -r /app/framework/requirements.txt && pip install -r /app/requirements.txt'
+
+    # Add the application source code.
+    ADD . /app
+
+    # Run a WSGI server to serve the application.
+    CMD gunicorn -b :$PORT config:app
+  config.py: |
+    from glob import glob
+    import importlib
+    import os.path
+    # This is needed to start gunicorn
+    from pyfun_events.run import app
+
+    for f in glob('*.py'):
+        if not os.path.isfile(f):
+            continue
+        print(f'Importing {f[:-3]}')
+        try:
+            importlib.import_module(f[:-3])
+        except Exception as e:
+            print(f'Error importing {f}: {e}')
+            continue
+    print('Starting')
+  requirements.txt: |
+    pyfun_events>=0.1.1
+    gunicorn
