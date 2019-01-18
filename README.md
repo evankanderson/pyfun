@@ -38,7 +38,7 @@ def Info():
     return "Got {0}".format(counter)
     
     
-@Get("/dance"):
+@Get("/dance")
 def Party():
     return "<BLINK>Like it's 1999</BLINK>"
 ```
@@ -47,7 +47,7 @@ def Party():
 ## Running manually
 
 Copy `packaging/config.py` and `packaging/requirements.txt` into your
-application directory alongside your other code. You can then start the Flaskk webserver running your function with:
+application directory alongside your other code. You can then start the Flask webserver running your function with:
 
 ```shell
 FLASK_APP=config
