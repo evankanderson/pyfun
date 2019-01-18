@@ -13,4 +13,4 @@ RUN /bin/ash -c 'apk add build-base && pip install -r /app/framework/requirement
 ADD . /app
 
 # Run a WSGI server to serve the application.
-CMD gunicorn -b :$PORT framework.config:app
+CMD gunicorn -b :$PORT --access-logfile - --error-logfile - framework.config:app
