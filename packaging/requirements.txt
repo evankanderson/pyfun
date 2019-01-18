@@ -1,2 +1,2 @@
-pyfun_events>=0.1.1
+pyfun_events>=0.2.1
 gunicorn

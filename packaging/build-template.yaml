@@ -19,7 +19,7 @@ spec:
     args:
     - '/bin/ash'
     - '-c'
-    - 'cp /py-framework/Dockerfile /py-framework/config.py /workspace/ && mkdir /workspace/framework && cp /py-framework/requirements.txt /workspace/framework/requirements.txt'
+    - 'mkdir /workspace/framework && cp /py-framework/Dockerfile /py-framework/config.py /py-framework/requirements.txt /workspace/framework/ && if ! [ -e /workspace/Dockerfile ]; then cp /workspace/framework/Dockerfile /workspace/Dockerfile; fi'
     volumeMounts:
     - mountPath: /py-framework
       name: py-function-framework
@@ -55,24 +55,34 @@ data:
     ADD . /app
 
     # Run a WSGI server to serve the application.
-    CMD gunicorn -b :$PORT config:app
+    CMD gunicorn -b :$PORT framework.config:app
   config.py: |
     from glob import glob
     import importlib
+    import logging
     import os.path
     # This is needed to start gunicorn
     from pyfun_events.run import app
 
+    if __name__ != '__main__':
+        gunicorn_logger = logging.getLogger('gunicorn.error')
+        app.logger.handlers = gunicorn_logger.handlers
+        app.logger.setLevel(gunicorn_logger.level)
+
     for f in glob('*.py'):
         if not os.path.isfile(f):
             continue
-        print(f'Importing {f[:-3]}')
+        logging.info(f'Importing {f[:-3]}')
         try:
             importlib.import_module(f[:-3])
+        except ImportError as error:
+            logging.exception(error)
+            logging.error(f'Error importing {f}: {error}')
         except Exception as e:
-            print(f'Error importing {f}: {e}')
+            logging.error(f'Error importing {f}: {e}')
             continue
-    print('Starting')
+    logging.info('Starting')
+
   requirements.txt: |
-    pyfun_events>=0.1.1
+    pyfun_events>=0.2.1
     gunicorn

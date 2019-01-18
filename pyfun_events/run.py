@@ -6,6 +6,7 @@
 import logging
 from glob import glob
 import importlib
+from inspect import signature, isfunction
 import os.path
 
 from cloudevents.sdk.event import v02
@@ -20,40 +21,50 @@ import pyfun_events.run
 app = Flask(__name__)
 
 
-def Handle(func: Callable[[object, dict], None]) -> None:
-    """Invoke func whenever an event occurs.
+def Handle(unpack: Callable[[str], object]=ujson.loads, path: str='/', **kwargs):
+    """Decorate a function to handle events.
 
     Assumes func is a method which takes two arguments: data and context.
-    data: type T, which should be able to be constructed from a string.
-    context: a dict containing cloudevents context information.
+    data: provided the body of the event, processed via the unpack function.
+    context: a dict containing cloudevents context attributes.
     """
-    def handle():
-        m = marshaller.NewDefaultHTTPMarshaller()
-        event = m.FromRequest(
-            v02.Event(),
-            request.headers,
-            request.stream,  # Maybe request.data?
-            ujson.load)
-        return func(event.Data(), event)
+    # It would be nice to support both decorating a function as
+    # @Handle and @Handle(params). This is more difficult because
+    # unpack is also a function, and the no-parens version of the
+    # annotation will pass the function as the first
+    # argument. Fortunately, a event-handling function takes at least
+    # two arguments, so we can inspect the function to determine if we
+    # are in the no-arg case.
+    no_arg = False
+    if isfunction(unpack) and len(signature(unpack).parameters) >= 1:
+        no_arg = unpack
+        unpack = ujson.loads
+    def wrap(func: Callable[[object, dict], None]) -> None:
+        def handle():
+            m = marshaller.NewDefaultHTTPMarshaller()
+            event = m.FromRequest(
+                v02.Event(),
+                request.headers,
+                request.data,
+                unpack)
+            return func(event.Data(), event)
 
-    pyfun_events.run.app.add_url_rule('/', 'handle', handle, methods=['POST'])
+        pyfun_events.run.app.add_url_rule(path, func.__name__, handle, methods=['POST'], **kwargs)
+    if no_arg:
+        return wrap(no_arg)
+    return wrap
 
 
-def Get(func: Callable[[], None]) -> None:
-    """Invoke the specified func on Get requests.
+def Get(path: str='/', **kwargs):
+    """Decorate a function to respond to Get requests.
     """
-    pyfun_events.run.app.add_url_rule('/', 'get', func)
-
-
-if __name__ == '__main__':
-    for f in glob('*.py'):
-        if not os.path.isfile(f):
-            continue
-        print('Importing {0}'.format(f[:-3]))
-        try:
-            importlib.import_module(f[:-3])
-        except Exception as e:
-            print('Error importing {0}: {1}'.format(f, e))
-            continue
-    print('Starting')
-    run.app.run(debug=True)
+    no_arg = False
+    if callable(path):
+        # Is actually a plain decorator
+        no_arg = path
+        path = '/'
+    def wrap(func: Callable[[], None]) -> None:
+        pyfun_events.run.app.add_url_rule(path, func.__name__, func, **kwargs)
+    if no_arg:
+        return wrap(no_arg)
+    return wrap

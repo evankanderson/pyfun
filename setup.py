@@ -5,7 +5,7 @@ with open('README.md', 'r') as fh:
 
 setuptools.setup(
     name='pyfun_events',
-    version='0.1.1',
+    version='0.2.1',
     long_description=long_description,
     long_description_content_type='text/markdown',
     url='https://github.com/pypa/sampleproject',
