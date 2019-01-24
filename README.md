@@ -13,7 +13,7 @@ Usage:
 ```python
 import logging
 
-from pyfun_events import Handle,Get
+from pyfun_events import Handle, Get
 
 counter = 0
 
@@ -21,13 +21,13 @@ counter = 0
 # @Handle assumes json body. For string or other body conversion, try:
 # @Handle(str)
 @Handle
-def DoEvent(data: str, context: dict):
+def DoEvent(data: object, context: dict):
     logging.info(data)
     counter = counter + 1
 
 
 @Handle(path="/secret")
-def DoOther(data: str, context: dict):
+def DoOther(data: object, context: dict):
     if data.get("handshake") == "backwards":
         counter = 0
         return "It's gone, man"
@@ -36,8 +36,8 @@ def DoOther(data: str, context: dict):
 @Get
 def Info():
     return "Got {0}".format(counter)
-    
-    
+
+
 @Get("/dance")
 def Party():
     return "<BLINK>Like it's 1999</BLINK>"
