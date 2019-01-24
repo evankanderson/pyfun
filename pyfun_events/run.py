@@ -5,11 +5,12 @@
 from cloudevents.sdk.event import v02
 from cloudevents.sdk import marshaller
 from flask import Flask, request
-from typing import Any, Callable, Optional, Union, overload, cast
+from typing import Any, Callable, Optional, TypeVar, Union, overload, cast
 import ujson
 
 app = Flask(__name__)
 
+T = TypeVar('T')
 
 Handler = Callable[[Any, dict], None]
 
@@ -22,8 +23,8 @@ def Handle(path: Handler) -> Handler:
 @overload
 def Handle(
       path: str="/",
-      unpack: Callable[[str], Any]=ujson.loads,
-      **kwargs) -> Callable[[Handler], Handler]:
+      unpack: Callable[[str], T]=ujson.loads,
+      **kwargs) -> Callable[[Callable[[T, dict], None]], Callable[[T, dict], None]]:
     ...
 
 def Handle(
