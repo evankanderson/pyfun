@@ -9,13 +9,15 @@ spec:
   - name: DOCKERFILE
     description: Path to the Dockerfile to build.
     default: /workspace/Dockerfile
+  - name: SERVICE
+    description: A Knative Service to push the image to after build.
+    default: ""
 
   timeout: 20m
 
   steps:
   - name: fill-in-framework
     image: alpine:3.8
-    entrypoint: /bin/ash
     args:
     - '/bin/ash'
     - '-c'
@@ -28,6 +30,40 @@ spec:
     args:
     - '--dockerfile=${DOCKERFILE}'
     - '--destination=${IMAGE}'
+  - name: apply-if-service
+    image: gcr.io/cloud-builders/kubectl
+    command: ["/bin/bash"]
+    args:
+    - '-c'
+    - |
+      if [[ "${SERVICE}" == "" ]]; then echo "No push requested"; exit; fi
+      if kubectl get services.serving.knative.dev ${SERVICE}; then
+        echo "Updating ${SERVICE}"
+        kubectl patch services.serving.knative.dev ${SERVICE} --type merge --patch "
+      spec:
+        runLatest:
+          configuration:
+            revisionTemplate:
+              spec:
+                container:
+                  image: ${IMAGE}
+        "
+      else
+        echo "Creating ${SERVICE}"
+        kubectl apply -f - <<EOF
+        apiVersion: serving.knative.dev/v1alpha1
+        kind: Service
+        metadata:
+          name: ${SERVICE}
+        spec:
+          runLatest:
+            configuration:
+              revisionTemplate:
+                spec:
+                  container:
+                    image: ${IMAGE}
+      EOF
+      fi
 
   volumes:
   - name:  py-function-framework
