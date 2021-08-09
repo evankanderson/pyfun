@@ -1,12 +1,27 @@
 # Function framework for Python
 
-This framework provides a mechanism to write Function-as-a-Service
-style code in Python for handling CloudEvents delivered via HTTP.
+This framework provides a mechanism to write Function-as-a-Service style code in
+Python for handling HTTP events, including CloudEvents delivered via HTTP.
 
 This framework is primarily intended to work with
-[Knative](https://github.com/knative/docs), but also works to provide
-a generic server for handling CloudEvents over HTTP (e.g. from
-Kubernetes or on a local machine).
+[Knative](https://knative.dev/), but also works to provide a generic server for
+handling CloudEvents over HTTP (e.g. from Kubernetes or on a local machine).
+
+The framework uses reflection to find a suitable function to wrap; it should not
+be necessary to import any of the following modules in your own code unless you
+want (e.g. for type definitions):
+
+- `frameork` (this module; on PyPi as `http-containerize`)
+- `flask`
+- `cloudevents`
+
+Instead, simply ensure that you have a single non-`_` prefixed function which
+uses some combination of the following:
+
+- HTTP request arguments (named `req`, `request`, `body`, `headers` or of the
+  `flask.Request` type)
+- CloudEvent arguments (named `event`, `payload`, `data`, `attributes` or of the
+  `cloudevents.sdk.event.v1.Event` type)
 
 Usage:
 
@@ -14,84 +29,28 @@ Usage:
 import logging
 from typing import Any
 
-from pyfun_events import Handle, Get
 
 counter = 0
 
 
-# @Handle assumes json body. For string or other body conversion, try:
-# @Handle(str)
-@Handle
-def DoEvent(data: Any, context: dict):
-    logging.info(data)
+def DoEvent(data: Any, attributes: dict, req: Any):
+    global counter
     counter = counter + 1
 
+    logging.info(f"Got data: {data}")
+    logging.info(f"From {req.origin}, my {counter}th request!")
 
-@Handle(path="/secret")
-def DoOther(data: Any, context: dict):
-    if data.get("handshake") == "backwards":
-        counter = 0
-        return "It's gone, man"
+    attributes["type"] = "com.example.reply"
+    attributes["datacontenttype"] = "text/plain"
 
+    return attributes, "It's a demo"
 
-@Get
-def Info():
-    return "Got {0}".format(counter)
-
-
-@Get("/dance")
-def Party():
-    return "<BLINK>Like it's 1999</BLINK>"
 ```
 
+## Building into a container:
 
-## Running manually
-
-Copy `packaging/config.py` and `packaging/requirements.txt` into your
-application directory alongside your other code. You can then start the Flask webserver running your function with:
+You can use the packeto buildpacks if you add `http-containerize>=0.4.0` to your `requirements.txt`:
 
 ```shell
-FLASK_APP=config
-flask run
-```
-
-## Running on Knative
-
-There is a supplied build template in `packaging/build-template.yaml`, which you can apply to your cluster with:
-
-```shell
-kubectl apply -f packaging/build-template.yaml
-```
-
-or
-
-```shell
-kubectl apply -f https://github.com/evankanderson/pyfun/tree/master/packaging/build-template.yaml
-```
-
-Then update your Knative Service like so:
-
-```diff
-apiVersion: serving.knative.dev/v1alpha1
-kind: Service
-metadata:
-  name: message-dumper
-spec:
-  runLatest:
-    configuration:
-+     build:
-+       source:
-+          git:
-+            url: YOUR_REPO_URL
-+            revision: HEAD
-+       template:
-+         name: pyfn
-+         arguments:
-+         - name: IMAGE
-+           value: YOUR_DOCKER_IMAGE
-+       serviceAccountName: builder
-  revisionTemplate:
-    spec:
-      container:
-        image: YOUR_DOCKER_IMAGE
+pack build pytestapp --buildpack  gcr.io/paketo-community/python --builder paketobuildpacks/builder:base
 ```

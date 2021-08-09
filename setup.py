@@ -4,16 +4,16 @@ with open('README.md', 'r') as fh:
     long_description = fh.read()
 
 setuptools.setup(
-    name='pyfun_events',
-    version='0.2.1',
+    name='http-containerize',
+    version='0.3.15',
     long_description=long_description,
     long_description_content_type='text/markdown',
-    url='https://github.com/pypa/sampleproject',
-    packages=setuptools.find_packages(),
+    url='https://github.com/evankanderson/pyfun',
+    license="Apache",
+    packages=setuptools.find_packages(include=("framework",)),
     install_requires=[
-        'cloudevents >=0.2.1, <0.3',
+        'cloudevents >=1.2, <2',
         'Flask>=1.0.2,<2',
-        'ujson>=1.35,<2',
         ],
     classifiers=[
         "Programming Language :: Python :: 3",

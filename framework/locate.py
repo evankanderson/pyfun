@@ -7,9 +7,9 @@ import typing
 import types
 
 import flask
-from flask.wrappers import Request
 import cloudevents.http
-import cloudevents.sdk.event.base
+import cloudevents.sdk.event.base as ce_sdk
+
 
 def FindFunc(dir: str) -> typing.Callable:
     workspace = pathlib.Path(dir).resolve()
@@ -38,70 +38,64 @@ def FindFunc(dir: str) -> typing.Callable:
         return functions[0]
     return None
 
-def _FuncFromModule(module : types.ModuleType) -> list[typing.Callable]:
+
+def _FuncFromModule(module: types.ModuleType) -> typing.List[typing.Callable]:
     found = []
     for (name, x) in inspect.getmembers(module, inspect.isfunction):
         if name.startswith("_"):
             continue
         sig = inspect.signature(x)
         print(f">>{name}: {sig}")
-        sig = _MatchSignature(x)
-        if sig is not None:
-#        if issubclass(next(iter(sig.parameters.values())).annotation, cloudevents.sdk.event.base.BaseEvent):
-#            x = _ConvertEvent(x)
-#        elif next(iter(sig.parameters)) in ("event", "payload"):
-#            x = _ConvertEvent(x)
+        for arg in sig.parameters.values():
+            convert = ArgumentConversion(arg)
+            if not convert.valid:
+                break
+        else:
             print(f">>> Matched sig {sig}")
             found.append(x)
-                
+
     return found
 
 
-def _ConvertEvent(func: typing.Callable) -> typing.Callable:
-    def wrapper(request: flask.Request):
-        event = cloudevents.http.from_http(request.headers, request.get_data())
-        # TODO: support payload, attributes format
-        out_event = func(event)
-        headers, body = cloudevents.http.to_binary(out_event)
-        return flask.Response(body, 200, headers)
-    print(f"$$ Converting {inspect.signature(func)} to {inspect.signature(wrapper)}")
-    return wrapper
+class ArgumentConversion:
+    def __init__(self, p: inspect.Parameter):
+        self.name = p.name
+        self._convert = None
+        self.need_event = False
+        self.unknownArg = None
+        TYPE_TO_TRANSLATION = {
+            ce_sdk.BaseEvent: (lambda x: x, True),
+            flask.Request: (lambda x: x, False),
+        }
+        NAME_TO_TRANSLATION = {
+            "event": (lambda x: x, True),
+            "data": (lambda x: x.data, True),
+            "payload": (lambda x: x.data, True),
+            "attributes": (lambda x: {k:x[k] for k in x}, True),
+            "req": (lambda x: x, False),
+            "request": (lambda x: x, False),
+            "body": (lambda x: x.get_data(), False),
+            "headers": (lambda x: x.headers, False),
+        }
+        if p.annotation in TYPE_TO_TRANSLATION:
+            self._convert, self.need_event = TYPE_TO_TRANSLATION[p.annotation]
+        if p.name in NAME_TO_TRANSLATION:
+            self._convert, self.need_event = NAME_TO_TRANSLATION[p.name]
 
-# Each function signature has a "score" based on the quality/likelihood that
-# this is the intended function signature. Higher numbers are better; multiple
-# signatures may have the same score.
-_Signature = namedtuple("_Signature", ['typelist', 'score', 'converter'])
-_SIGNATURES = [
-    _Signature((cloudevents.sdk.event.base.BaseEvent,), 10, _ConvertEvent),
-    _Signature((flask.Request,), 10, None),
-    _Signature(("event",), 6, _ConvertEvent),
-    _Signature(("payload", "attributes"), 6, _ConvertEvent),
-    _Signature(("payload",), 6, _ConvertEvent),
-    _Signature(("attributes",), 6, _ConvertEvent),
-    _Signature(("req",), 6, None),
-    _Signature(("request",), 6, None),
-    _Signature(("body",), 6, None),
-    _Signature(("body", "headers"), 6, None),
-    _Signature(("headers",), 6, None),
-]
+        if self._convert is None and p.default == inspect.Parameter.empty:
+            if p.kind not in (
+                inspect.Parameter.VAR_POSITIONAL,
+                inspect.Parameter.VAR_KEYWORD,
+            ):
+                self.unknownArg = p
 
-def _MatchSignature(func: typing.Callable) -> _Signature:
-    sig = inspect.signature(func)
-    params = [(k, v) for k, v in sig.parameters.items()]
-    for s in _SIGNATURES:
-        if len(params) != len(s.typelist):
-            continue
-        for want, got in zip(s.typelist, params):
-            if isinstance(want, str):
-                if got[0] != want:
-                    break
-            else:
-                if not issubclass(got[1].annotation, want):
-                    break
-        else:
-            return s
+    def convert(self, req: flask.Request, ce: ce_sdk.BaseEvent = None) -> typing.Any:
+        if not self.valid:
+            raise ValueError(f"Unable to convert {self.p} to a function argument.")
+        if self.need_event:
+            return self._convert(ce)
+        return self._convert(req)
 
-    if len(params) == 1:
-        return _Signature((params[1].annotation), 2, None)
-
-    return _Signature((), 0, None)
+    @property
+    def valid(self) -> bool:
+        return self.unknownArg is None
