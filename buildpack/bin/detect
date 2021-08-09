@@ -13,6 +13,12 @@ name = "site-packages"
 # We only need pip during the install process
 [requires.metadata]
 build = true
+
+[[requires]]
+name = "func-framework"
 EOF
+
+echo "TODO: actual dection."
+echo "Assuming function framework..."
 
 exit 0
