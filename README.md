@@ -52,5 +52,7 @@ def DoEvent(data: Any, attributes: dict, req: Any):
 You can use the packeto buildpacks if you add `http-containerize>=0.4.0` to your `requirements.txt`:
 
 ```shell
-pack build pytestapp --buildpack  gcr.io/paketo-community/python --builder paketobuildpacks/builder:base
+pack build pytestapp --buildpack  ekanderson/pyfun:0.1.1 --builder paketobuildpacks/builder:base
 ```
+
+**NOTE: this is not working yet; the `pip install` in `buildpack` doesn't seem to show up in the final image.**
