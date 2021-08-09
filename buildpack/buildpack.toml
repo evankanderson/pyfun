@@ -1,0 +1,9 @@
+api = "0.5"
+
+[buildpack]
+  id = "evankanderson/pyfun-addin"
+  version = "0.0.1"
+  name = "Evan's pyfun addin"
+
+[[stacks]]
+  id = "io.buildpacks.stacks.bionic"

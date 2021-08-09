@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+layers_dir="$1"
+env_dir="$2/env"
+plan_path="$3"
+
+pip install --compile --user --disable-pip-version-check http-containerize>=0.4.0
+
+cat > "$layserdir/launch.toml" <<EOF
+[[processes]]
+type = "web"
+command = "python3 -m framework"
+EOF
+
+exit 0

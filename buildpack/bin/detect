@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+
+plan=$2
+
+cat >$plan <<EOF
+[[provides]]
+name = "func-framework"
+
+[[requires]]
+# The build requires pip
+name = "site-packages"
+
+# We only need pip during the install process
+[requires.metadata]
+build = true
+EOF
+
+exit 0
