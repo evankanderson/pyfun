@@ -54,5 +54,8 @@ You can use the packeto buildpacks if you add `http-containerize>=0.4.0` to your
 ```shell
 pack build pytestapp --buildpack  ekanderson/pyfun:0.1.1 --builder paketobuildpacks/builder:base
 ```
+You can then invoke it via:
 
-**NOTE: this is not working yet; the `pip install` in `buildpack` doesn't seem to show up in the final image.**
+```shell
+docker run --rm -p 8080:8080 -e 8080 pytestapp
+```
