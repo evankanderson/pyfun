@@ -34,8 +34,7 @@ def WrapFunction(func: typing.Callable) -> typing.Callable:
                         result = cloudevents.http.CloudEvent(*result)
                     else:
                         result = cloudevents.http.CloudEvent(result)
-                except Exception as e:
-                    traceback.print_exc()
+                except Exception:
                     # Opportunistic conversion; failures will be caught in the next block
                     pass
             try:

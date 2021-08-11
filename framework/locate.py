@@ -1,4 +1,3 @@
-from collections import namedtuple
 import importlib.util
 import inspect
 import pathlib
@@ -7,7 +6,6 @@ import typing
 import types
 
 import flask
-import cloudevents.http
 import cloudevents.sdk.event.base as ce_sdk
 
 
@@ -71,7 +69,7 @@ class ArgumentConversion:
             "event": (lambda x: x, True),
             "data": (lambda x: x.data, True),
             "payload": (lambda x: x.data, True),
-            "attributes": (lambda x: {k:x[k] for k in x}, True),
+            "attributes": (lambda x: {k: x[k] for k in x}, True),
             "req": (lambda x: x, False),
             "request": (lambda x: x, False),
             "body": (lambda x: x.get_data(), False),

@@ -5,7 +5,7 @@ with open('README.md', 'r') as fh:
 
 setuptools.setup(
     name='http-containerize',
-    version='0.4.2',
+    version='0.4.3',
     long_description=long_description,
     long_description_content_type='text/markdown',
     url='https://github.com/evankanderson/pyfun',

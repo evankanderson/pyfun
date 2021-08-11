@@ -1,2 +1,0 @@
-pyfun_events>=0.2.1
-gunicorn
