@@ -2,7 +2,7 @@ api = "0.5"
 
 [buildpack]
   id = "evankanderson/pyfun-addin"
-  version = "0.0.4"
+  version = "0.0.11"
   name = "Evan's pyfun addin"
 
 [[stacks]]

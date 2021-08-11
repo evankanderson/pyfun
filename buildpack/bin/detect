@@ -10,9 +10,10 @@ name = "func-framework"
 # The build requires pip
 name = "site-packages"
 
-# We only need pip during the install process
 [requires.metadata]
 build = true
+
+launch = true
 
 [[requires]]
 name = "func-framework"
