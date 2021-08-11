@@ -6,26 +6,19 @@ layers_dir="$1"
 env_dir="$2/env"
 plan_path="$3"
 
-logfile="__debug_only__.txt"
-ls $layers_dir >> $logfile
-echo "-----" >> $logfile
-ls $env_dir >> $logfile
-echo "-----" >> $logfile
-env >> $logfile
-
 packages="$layers_dir/func-packages"
 
 mkdir "$packages"
 echo "launch = true" > "$packages.toml"
+# We don't want to install new packages in $packages, because we want to use
+# the same layer as `pip install`
 # export PYTHONUSERBASE="$packages"
 
-pip install --compile --user --disable-pip-version-check "http-containerize>=0.4.0"
+pip install --compile --user --disable-pip-version-check "http-containerize>=0.4.2"
 
 echo "launch = true" > "${PYTHONUSERBASE}.toml"
 
-echo "=====" >> $logfile
-ls "$packages" >> $logfile
-
+# Set the startup command to run the `framework` module.
 cat > "$layers_dir/launch.toml" <<EOF
 [[processes]]
 type = "web"

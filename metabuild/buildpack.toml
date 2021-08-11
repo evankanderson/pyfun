@@ -1,9 +1,13 @@
+# Build in this directory via:
+#
+# pack buildpack package ekanderson/pyfun:0.1.1 --config .\package.toml --publish
+
 api = "0.5"
 
 [buildpack]
   id = "evankanderson/pyfun"
   name = "Evan's Function Buildpack"
-  version = "0.1.0"
+  version = "0.1.1"
 
 [metadata]
   include-files = ["buildpack.toml"]
@@ -51,7 +55,7 @@ api = "0.5"
 
   [[order.group]]
     id = "evankanderson/pyfun-addin"
-    version = "0.0.11"
+    version = "0.1.0"
 
 # Copied from https://github.com/paketo-community/python
 [[order]]
@@ -88,4 +92,4 @@ api = "0.5"
 
   [[order.group]]
     id = "evankanderson/pyfun-addin"
-    version = "0.0.11"
+    version = "0.1.0"
