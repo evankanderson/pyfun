@@ -2,17 +2,19 @@
 #
 # A simple function framework
 
-from cloudevents.sdk.event import v02
+from cloudevents.sdk.event import v1, base
 from cloudevents.sdk import marshaller
+from cloudevents.sdk.converters import binary
 from flask import Flask, request
 from typing import Any, Callable, Optional, TypeVar, Union, overload, cast
+from werkzeug.wrappers import Response
 import ujson
 
 app = Flask(__name__)
 
 T = TypeVar('T')
 
-Handler = Callable[[Any, dict], None]
+Handler = Callable[[Any, dict], Union[None, v1.Event]]
 
 GetHandler = Callable[[], None]
 
@@ -30,8 +32,12 @@ def Handle(
 def Handle(
     path: Union[str, Handler]='/',
     unpack: Callable[[str], Any]=ujson.loads,
+    repack: Callable[Any, str]=ujson.dumps,
     **kwargs):
     """Decorate a function to handle events.
+
+    May be used as a decorator with or without arguments; if no arguments are
+    provided, the decorated function will handle all events based at the root.
 
     Assumes func is a method which takes two arguments: data and context.
     data: provided the body of the event, processed via the unpack function.
@@ -45,11 +51,15 @@ def Handle(
         def handle():
             m = marshaller.NewDefaultHTTPMarshaller()
             event = m.FromRequest(
-                v02.Event(),
+                v1.Event(),
                 request.headers,
                 request.data,
                 unpack)
-            return func(event.Data(), event)
+            retval = func(event.Data(), event)
+            if isinstance(retval, base.BaseEvent):
+                headers, body = m.ToRequest(retval, binary.BinaryHTTPCloudEventConverter, repack)
+                retval = Response(body, status=200, headers=headers)
+            return retval
         app.add_url_rule(path, func.__name__, handle, methods=['POST'], **kwargs)
         return func
     if no_arg:
