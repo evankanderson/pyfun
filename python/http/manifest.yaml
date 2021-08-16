@@ -1,0 +1,4 @@
+builders:
+  default: paketobuildpacks/builder:base
+  base: paketobuildpacks/builder:base
+  full: paketobuildpacks/builder:full

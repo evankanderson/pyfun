@@ -11,7 +11,7 @@ The framework uses reflection to find a suitable function to wrap; it should not
 be necessary to import any of the following modules in your own code unless you
 want (e.g. for type definitions):
 
-- `frameork` (this module; on PyPi as `http-containerize`)
+- `framework` (this module; on PyPi as `http-containerize`)
 - `flask`
 - `cloudevents`
 
@@ -49,8 +49,6 @@ def DoEvent(data: Any, attributes: dict, req: Any):
 
 ## Building into a container:
 
-You can use the packeto buildpacks if you add `http-containerize>=0.4.0` to your `requirements.txt`:
-
 ```shell
 pack build pytestapp --buildpack  ekanderson/pyfun:0.1.1 --builder paketobuildpacks/builder:base
 ```
@@ -58,4 +56,11 @@ You can then invoke it via:
 
 ```shell
 docker run --rm -p 8080:8080 -e 8080 pytestapp
+```
+
+It's also expected that you should be able (soon) to run this via [kn-plugin-func](https://github.com/knative-sandbox/kn-plugin-func):
+
+```shell
+kn func create -l python -t http
+kn func run
 ```
